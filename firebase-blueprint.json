@@ -1,0 +1,505 @@
+{
+  "entities": {
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "Public student profile displayed on marketplace listings and item details without PII.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth UID of the student.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Student full name.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "college": {
+          "type": "string",
+          "description": "College or university name.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "department": {
+          "type": "string",
+          "description": "Academic department or course.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "isVerifiedCollegeEmail": {
+          "type": "boolean",
+          "description": "Whether the student email matches an institutional campus domain and is verified."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when public profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when public profile was last updated."
+        }
+      },
+      "required": ["id", "name", "college", "department", "isVerifiedCollegeEmail", "createdAt", "updatedAt"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Private student profile containing PII (email and optional phone number), strictly restricted to the owning student.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth UID of the student.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Student full name.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Student email address.",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "college": {
+          "type": "string",
+          "description": "College or university name.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "department": {
+          "type": "string",
+          "description": "Academic department or course.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "phone": {
+          "type": "string",
+          "description": "Optional private phone number, never exposed publicly.",
+          "maxLength": 30
+        },
+        "isVerifiedCollegeEmail": {
+          "type": "boolean",
+          "description": "Whether email matches institutional domain and is verified."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when account was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when account was updated."
+        }
+      },
+      "required": ["id", "name", "email", "college", "department", "isVerifiedCollegeEmail", "createdAt", "updatedAt"]
+    },
+    "Listing": {
+      "title": "Listing",
+      "description": "Campus item available for borrowing or rental on UniLoop.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Listing document ID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the item owner.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Display name of the owner.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "ownerCollege": {
+          "type": "string",
+          "description": "College of the owner.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "ownerDepartment": {
+          "type": "string",
+          "description": "Department of the owner.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "title": {
+          "type": "string",
+          "description": "Item title.",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "category": {
+          "type": "string",
+          "description": "Marketplace category.",
+          "enum": [
+            "Electronics",
+            "Academic Equipment",
+            "Books and Notes",
+            "Lab Equipment",
+            "Stationery",
+            "Other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed item description.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "condition": {
+          "type": "string",
+          "description": "Physical condition of the item.",
+          "enum": ["Brand New", "Like New", "Good", "Fair"]
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL or compressed data URI of the item photo.",
+          "minLength": 1,
+          "maxLength": 250000
+        },
+        "campusLocation": {
+          "type": "string",
+          "description": "Campus pickup location.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "availabilityHours": {
+          "type": "string",
+          "description": "Availability hours text.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "pricingMethod": {
+          "type": "string",
+          "description": "Pricing calculation basis (borrowing/renting primary, sale secondary).",
+          "enum": ["free", "hourly", "period", "daily", "weekly", "sale"]
+        },
+        "price": {
+          "type": "number",
+          "description": "Price in INR (0 if free)."
+        },
+        "allowedDurations": {
+          "type": "array",
+          "description": "List of durations offered by the owner (max 15 items)."
+        },
+        "usageInstructions": {
+          "type": "string",
+          "description": "Optional care/usage guidelines.",
+          "maxLength": 500
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Available quantity."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Whether the listing is currently available for requests."
+        },
+        "isDemo": {
+          "type": "boolean",
+          "description": "Indicates demonstration sample item."
+        },
+        "reservedSlots": {
+          "type": "array",
+          "description": "Non-PII active booking windows used to prevent overlapping reservations (max 20)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when listing was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when listing was updated."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "ownerName",
+        "ownerCollege",
+        "ownerDepartment",
+        "title",
+        "category",
+        "description",
+        "condition",
+        "imageUrl",
+        "campusLocation",
+        "availabilityHours",
+        "pricingMethod",
+        "price",
+        "allowedDurations",
+        "quantity",
+        "isAvailable",
+        "isDemo",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BorrowRequest": {
+      "title": "BorrowRequest",
+      "description": "Borrowing or rental request with status workflow and owner-authorized phone sharing.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Request document ID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "listingId": {
+          "type": "string",
+          "description": "Target listing ID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "listingTitle": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "listingCategory": {
+          "type": "string",
+          "enum": [
+            "Electronics",
+            "Academic Equipment",
+            "Books and Notes",
+            "Lab Equipment",
+            "Stationery",
+            "Other"
+          ]
+        },
+        "listingImageUrl": {
+          "type": "string",
+          "maxLength": 250000
+        },
+        "listingLocation": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "ownerCollege": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "borrowerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "borrowerEmail": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "borrowerCollege": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "borrowerDepartment": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "pickupDate": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "pickupTime": {
+          "type": "string",
+          "maxLength": 10,
+          "pattern": "^\\d{2}:\\d{2}$"
+        },
+        "durationKey": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "durationHours": {
+          "type": "number"
+        },
+        "returnDate": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "returnTime": {
+          "type": "string",
+          "maxLength": 10,
+          "pattern": "^\\d{2}:\\d{2}$"
+        },
+        "pricingMethod": {
+          "type": "string",
+          "enum": ["free", "hourly", "period", "daily", "weekly", "sale"]
+        },
+        "rate": {
+          "type": "number"
+        },
+        "estimatedCost": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "rejected", "cancelled", "borrowed", "return_requested", "completed"]
+        },
+        "rejectionReason": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "isDemoRequest": {
+          "type": "boolean",
+          "description": "True when the request targets a seeded campus demo sample listing."
+        },
+        "phoneSharedWithBorrower": {
+          "type": "boolean"
+        },
+        "phoneDecisionMade": {
+          "type": "boolean"
+        },
+        "ownerPhoneIfShared": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "ownerPhoneDecision": {
+          "type": "string",
+          "enum": ["shared", "private", "not_set"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acceptedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "borrowedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "returnRequestedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cancelledAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rejectedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "listingId",
+        "listingTitle",
+        "listingCategory",
+        "listingImageUrl",
+        "listingLocation",
+        "ownerId",
+        "ownerName",
+        "ownerCollege",
+        "borrowerId",
+        "borrowerName",
+        "borrowerEmail",
+        "borrowerCollege",
+        "borrowerDepartment",
+        "pickupDate",
+        "pickupTime",
+        "durationKey",
+        "durationHours",
+        "returnDate",
+        "returnTime",
+        "pricingMethod",
+        "rate",
+        "estimatedCost",
+        "status",
+        "phoneSharedWithBorrower",
+        "phoneDecisionMade",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global campus configuration such as standard college period length.",
+      "type": "object",
+      "properties": {
+        "collegePeriodMinutes": {
+          "type": "number"
+        },
+        "defaultCollegeName": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["collegePeriodMinutes", "defaultCollegeName"]
+    }
+  },
+  "firestore": {
+    "/users_public/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublic" },
+      "description": "Publicly viewable student profile metadata (no email or phone)."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Owner-only student profile containing email and optional phone number."
+    },
+    "/listings/{listingId}": {
+      "schema": { "$ref": "#/entities/Listing" },
+      "description": "Campus item listings browseable by users and editable only by their owner."
+    },
+    "/requests/{requestId}": {
+      "schema": { "$ref": "#/entities/BorrowRequest" },
+      "description": "Borrowing requests accessible only to the borrower and the item owner."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AppSettings" },
+      "description": "Application configuration document (e.g. collegePeriodMinutes)."
+    }
+  }
+}

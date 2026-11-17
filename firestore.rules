@@ -1,0 +1,376 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Hardened Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserPublic(data, userId) {
+      return data.keys().hasAll(['id', 'name', 'college', 'department', 'isVerifiedCollegeEmail', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'name', 'college', 'department', 'isVerifiedCollegeEmail', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id == userId && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.college is string && data.college.size() >= 1 && data.college.size() <= 150
+        && data.department is string && data.department.size() >= 1 && data.department.size() <= 150
+        && data.isVerifiedCollegeEmail is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivate(data, userId) {
+      return data.keys().hasAll(['id', 'name', 'email', 'college', 'department', 'isVerifiedCollegeEmail', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'name', 'email', 'college', 'department', 'phone', 'isVerifiedCollegeEmail', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id == userId && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.college is string && data.college.size() >= 1 && data.college.size() <= 150
+        && data.department is string && data.department.size() >= 1 && data.department.size() <= 150
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 30))
+        && data.isVerifiedCollegeEmail is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidListing(data, listingId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'ownerName', 'ownerCollege', 'ownerDepartment',
+          'title', 'category', 'description', 'condition', 'imageUrl',
+          'campusLocation', 'availabilityHours', 'pricingMethod', 'price',
+          'allowedDurations', 'quantity', 'isAvailable', 'isDemo', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'ownerName', 'ownerCollege', 'ownerDepartment',
+          'title', 'category', 'description', 'condition', 'imageUrl',
+          'campusLocation', 'availabilityHours', 'pricingMethod', 'price',
+          'allowedDurations', 'usageInstructions', 'quantity', 'isAvailable',
+          'isDemo', 'reservedSlots', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == listingId && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 100
+        && data.ownerCollege is string && data.ownerCollege.size() >= 1 && data.ownerCollege.size() <= 150
+        && data.ownerDepartment is string && data.ownerDepartment.size() >= 1 && data.ownerDepartment.size() <= 150
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && data.category in ['Electronics', 'Academic Equipment', 'Books and Notes', 'Lab Equipment', 'Stationery', 'Other']
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 2000
+        && data.condition in ['Brand New', 'Like New', 'Good', 'Fair']
+        && data.imageUrl is string && data.imageUrl.size() >= 1 && data.imageUrl.size() <= 250000
+        && data.campusLocation is string && data.campusLocation.size() >= 1 && data.campusLocation.size() <= 200
+        && data.availabilityHours is string && data.availabilityHours.size() >= 1 && data.availabilityHours.size() <= 200
+        && data.pricingMethod in ['free', 'hourly', 'period', 'daily', 'weekly', 'sale']
+        && data.price is number && data.price >= 0 && data.price <= 100000 && (data.pricingMethod != 'free' || data.price == 0)
+        && data.allowedDurations is list && data.allowedDurations.size() >= 1 && data.allowedDurations.size() <= 15 && data.allowedDurations[0] is string
+        && (!('usageInstructions' in data) || (data.usageInstructions is string && data.usageInstructions.size() <= 500))
+        && data.quantity is number && data.quantity >= 1 && data.quantity <= 100
+        && data.isAvailable is bool
+        && data.isDemo is bool
+        && (!('reservedSlots' in data) || (data.reservedSlots is list && data.reservedSlots.size() <= 20 && (data.reservedSlots.size() == 0 || data.reservedSlots[0] is map)))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidRequest(data, requestId) {
+      return data.keys().hasAll([
+          'id', 'listingId', 'listingTitle', 'listingCategory', 'listingImageUrl', 'listingLocation',
+          'ownerId', 'ownerName', 'ownerCollege',
+          'borrowerId', 'borrowerName', 'borrowerEmail', 'borrowerCollege', 'borrowerDepartment',
+          'pickupDate', 'pickupTime', 'durationKey', 'durationHours', 'returnDate', 'returnTime',
+          'pricingMethod', 'rate', 'estimatedCost', 'status',
+          'phoneSharedWithBorrower', 'phoneDecisionMade', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'listingId', 'listingTitle', 'listingCategory', 'listingImageUrl', 'listingLocation',
+          'ownerId', 'ownerName', 'ownerCollege',
+          'borrowerId', 'borrowerName', 'borrowerEmail', 'borrowerCollege', 'borrowerDepartment',
+          'pickupDate', 'pickupTime', 'durationKey', 'durationHours', 'returnDate', 'returnTime',
+          'pricingMethod', 'rate', 'estimatedCost', 'note', 'status', 'rejectionReason', 'isDemoRequest',
+          'phoneSharedWithBorrower', 'phoneDecisionMade', 'ownerPhoneIfShared', 'ownerPhoneDecision',
+          'createdAt', 'updatedAt', 'acceptedAt', 'borrowedAt', 'returnRequestedAt', 'completedAt', 'cancelledAt', 'rejectedAt'
+        ])
+        && data.id is string && data.id == requestId && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.listingId is string && data.listingId.size() >= 1 && data.listingId.size() <= 128 && data.listingId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.listingTitle is string && data.listingTitle.size() >= 1 && data.listingTitle.size() <= 140
+        && data.listingCategory in ['Electronics', 'Academic Equipment', 'Books and Notes', 'Lab Equipment', 'Stationery', 'Other']
+        && data.listingImageUrl is string && data.listingImageUrl.size() >= 1 && data.listingImageUrl.size() <= 250000
+        && data.listingLocation is string && data.listingLocation.size() >= 1 && data.listingLocation.size() <= 200
+        && data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 100
+        && data.ownerCollege is string && data.ownerCollege.size() >= 1 && data.ownerCollege.size() <= 150
+        && data.borrowerId is string && data.borrowerId.size() >= 1 && data.borrowerId.size() <= 128 && data.borrowerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.borrowerName is string && data.borrowerName.size() >= 1 && data.borrowerName.size() <= 100
+        && data.borrowerEmail is string && data.borrowerEmail.size() >= 3 && data.borrowerEmail.size() <= 254
+        && data.borrowerCollege is string && data.borrowerCollege.size() >= 1 && data.borrowerCollege.size() <= 150
+        && data.borrowerDepartment is string && data.borrowerDepartment.size() >= 1 && data.borrowerDepartment.size() <= 150
+        && data.pickupDate is string && data.pickupDate.size() == 10 && data.pickupDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.pickupTime is string && data.pickupTime.size() == 5 && data.pickupTime.matches('^\\d{2}:\\d{2}$')
+        && data.durationKey is string && data.durationKey.size() >= 1 && data.durationKey.size() <= 60
+        && data.durationHours is number && data.durationHours > 0 && data.durationHours <= 720
+        && data.returnDate is string && data.returnDate.size() == 10 && data.returnDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.returnTime is string && data.returnTime.size() == 5 && data.returnTime.matches('^\\d{2}:\\d{2}$')
+        && data.pricingMethod in ['free', 'hourly', 'period', 'daily', 'weekly', 'sale']
+        && data.rate is number && data.rate >= 0 && data.rate <= 100000
+        && data.estimatedCost is number && data.estimatedCost >= 0 && data.estimatedCost <= 1000000
+        && (!('note' in data) || (data.note is string && data.note.size() <= 500))
+        && data.status in ['pending', 'accepted', 'rejected', 'cancelled', 'borrowed', 'return_requested', 'completed']
+        && (!('rejectionReason' in data) || (data.rejectionReason is string && data.rejectionReason.size() <= 300))
+        && (!('isDemoRequest' in data) || data.isDemoRequest is bool)
+        && data.phoneSharedWithBorrower is bool
+        && data.phoneDecisionMade is bool
+        && (!('ownerPhoneIfShared' in data) || (data.ownerPhoneIfShared is string && data.ownerPhoneIfShared.size() <= 30))
+        && (!('ownerPhoneDecision' in data) || data.ownerPhoneDecision in ['shared', 'private', 'not_set'])
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && (!('acceptedAt' in data) || data.acceptedAt is timestamp)
+        && (!('borrowedAt' in data) || data.borrowedAt is timestamp)
+        && (!('returnRequestedAt' in data) || data.returnRequestedAt is timestamp)
+        && (!('completedAt' in data) || data.completedAt is timestamp)
+        && (!('cancelledAt' in data) || data.cancelledAt is timestamp)
+        && (!('rejectedAt' in data) || data.rejectedAt is timestamp);
+    }
+
+    // --- Collection: Public Student Profiles (No PII) ---
+    match /users_public/{userId} {
+      allow get: if isValidId(userId);
+
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPublic(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPublic(incoming(), userId)
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'college', 'department', 'isVerifiedCollegeEmail', 'updatedAt']);
+    }
+
+    // --- Collection: Private Student Profiles (Strict Owner-Only PII) ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPrivate(incoming(), userId)
+        && (!('email' in request.auth.token) || incoming().email.lower() == request.auth.token.email.lower())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserPrivate(incoming(), userId)
+        && incoming().id == existing().id
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'college', 'department', 'phone', 'isVerifiedCollegeEmail', 'updatedAt']);
+    }
+
+    // --- Collection: Marketplace Listings ---
+    match /listings/{listingId} {
+      allow get: if isValidId(listingId);
+      allow list: if resource.data.isAvailable in [true, false];
+
+      allow create: if isVerifiedUser()
+        && isValidId(listingId)
+        && isValidListing(incoming(), listingId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          (
+            incoming().ownerId == request.auth.uid
+            && incoming().isDemo == false
+          )
+          || (
+            incoming().isDemo == true
+            && listingId.matches('^demo-listing-[0-9]+-[a-z0-9\\-]+$')
+            && incoming().ownerId in ['demo-student-a', 'demo-student-b', 'demo-student-c']
+          )
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(listingId)
+        && isValidListing(incoming(), listingId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().isDemo == existing().isDemo
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && existing().ownerId == request.auth.uid
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'category', 'description', 'condition', 'imageUrl',
+            'campusLocation', 'availabilityHours', 'pricingMethod', 'price',
+            'allowedDurations', 'usageInstructions', 'quantity', 'isAvailable', 'updatedAt'
+          ])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['isAvailable', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['reservedSlots', 'isAvailable', 'updatedAt'])
+        );
+
+      allow delete: if isVerifiedUser()
+        && isValidId(listingId)
+        && existing().ownerId == request.auth.uid;
+    }
+
+    function canActAsRequestOwner(reqData) {
+      return reqData.ownerId == request.auth.uid;
+    }
+
+    // --- Collection: Borrowing Requests (Strict Participant Privacy & State Machine) ---
+    match /requests/{requestId} {
+      allow get: if isSignedIn()
+        && isValidId(requestId)
+        && (existing().ownerId == request.auth.uid || existing().borrowerId == request.auth.uid);
+
+      allow list: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || resource.data.borrowerId == request.auth.uid);
+
+      allow create: if isVerifiedUser()
+        && isValidId(requestId)
+        && isValidRequest(incoming(), requestId)
+        && incoming().borrowerId == request.auth.uid
+        && (!('email' in request.auth.token) || incoming().borrowerEmail.lower() == request.auth.token.email.lower())
+        && incoming().ownerId != request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().phoneSharedWithBorrower == false
+        && incoming().phoneDecisionMade == false
+        && !('ownerPhoneIfShared' in incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
+        && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.ownerId == incoming().ownerId
+        && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.isAvailable == true
+        && (
+          (!('isDemoRequest' in incoming()) && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.isDemo == false)
+          || ('isDemoRequest' in incoming() && incoming().isDemoRequest == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.isDemo)
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(requestId)
+        && isValidRequest(incoming(), requestId)
+        && incoming().id == existing().id
+        && incoming().listingId == existing().listingId
+        && incoming().ownerId == existing().ownerId
+        && incoming().borrowerId == existing().borrowerId
+        && (
+          (!('isDemoRequest' in existing()) && !('isDemoRequest' in incoming()))
+          || ('isDemoRequest' in existing() && 'isDemoRequest' in incoming() && incoming().isDemoRequest == existing().isDemoRequest)
+        )
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && !(existing().status in ['completed', 'rejected', 'cancelled'])
+        && (
+          // Action: Borrower cancels pending request
+          (
+            existing().borrowerId == request.auth.uid
+            && existing().status == 'pending'
+            && incoming().status == 'cancelled'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'cancelledAt', 'updatedAt'])
+            && incoming().cancelledAt == request.time
+          )
+          // Action: Owner accepts pending request
+          || (
+            canActAsRequestOwner(existing())
+            && existing().status == 'pending'
+            && incoming().status == 'accepted'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'acceptedAt', 'updatedAt'])
+            && incoming().acceptedAt == request.time
+          )
+          // Action: Owner rejects pending request
+          || (
+            canActAsRequestOwner(existing())
+            && existing().status == 'pending'
+            && incoming().status == 'rejected'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'rejectionReason', 'rejectedAt', 'updatedAt'])
+            && incoming().rejectedAt == request.time
+          )
+          // Action: Owner sets phone sharing permission on accepted/ongoing request
+          || (
+            canActAsRequestOwner(existing())
+            && existing().status in ['accepted', 'borrowed', 'return_requested']
+            && incoming().status == existing().status
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'phoneSharedWithBorrower', 'phoneDecisionMade', 'ownerPhoneIfShared', 'ownerPhoneDecision', 'updatedAt'
+            ])
+            && incoming().phoneDecisionMade == true
+            && (
+              (
+                incoming().phoneSharedWithBorrower == true
+                && incoming().ownerPhoneDecision == 'shared'
+                && 'ownerPhoneIfShared' in incoming()
+                && incoming().ownerPhoneIfShared is string
+                && incoming().ownerPhoneIfShared.size() >= 3
+                && incoming().ownerPhoneIfShared.size() <= 30
+              )
+              || (
+                incoming().phoneSharedWithBorrower == false
+                && incoming().ownerPhoneDecision == 'private'
+                && (!('ownerPhoneIfShared' in incoming()) || incoming().ownerPhoneIfShared == '')
+              )
+            )
+          )
+          // Action: Owner or Borrower marks accepted item as borrowed
+          || (
+            (canActAsRequestOwner(existing()) || existing().borrowerId == request.auth.uid)
+            && existing().status == 'accepted'
+            && incoming().status == 'borrowed'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'borrowedAt', 'updatedAt'])
+            && incoming().borrowedAt == request.time
+          )
+          // Action: Borrower requests return confirmation
+          || (
+            existing().borrowerId == request.auth.uid
+            && existing().status == 'borrowed'
+            && incoming().status == 'return_requested'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'returnRequestedAt', 'updatedAt'])
+            && incoming().returnRequestedAt == request.time
+          )
+          // Action: Owner confirms physical return -> Completed
+          || (
+            canActAsRequestOwner(existing())
+            && existing().status == 'return_requested'
+            && incoming().status == 'completed'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'completedAt', 'updatedAt'])
+            && incoming().completedAt == request.time
+          )
+        );
+    }
+
+    // --- Collection: App Settings ---
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && settingId == 'campus';
+    }
+  }
+}
